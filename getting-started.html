@@ -1,0 +1,368 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Getting Started - Batch Guide</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="User guide for the batch-rs library.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <base href="">
+
+        <link rel="stylesheet" href="book.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <link rel="shortcut icon" href="favicon.png">
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme -->
+        
+
+        
+
+        <!-- Fetch Clipboard.js from CDN but have a local fallback -->
+        <script src="https://cdn.jsdelivr.net/clipboard.js/1.6.1/clipboard.min.js"></script>
+        <script>
+            if (typeof Clipboard == 'undefined') {
+                document.write(unescape("%3Cscript src='clipboard.min.js'%3E%3C/script%3E"));
+            }
+        </script>
+
+    </head>
+    <body class="light">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
+            if (theme === null || theme === undefined) { theme = 'light'; }
+            document.body.className = theme;
+            document.querySelector('html').className = theme;
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            document.querySelector('html').classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <ol class="chapter"><li class="affix"><a href="batch.html">Batch</a></li><li><a href="installation.html"><strong aria-hidden="true">1.</strong> Installation</a></li><li><a href="getting-started.html" class="active"><strong aria-hidden="true">2.</strong> Getting Started</a></li><li><a href="tasks.html"><strong aria-hidden="true">3.</strong> Tasks</a></li><li><a href="queries.html"><strong aria-hidden="true">4.</strong> Queries</a></li><li><a href="worker.html"><strong aria-hidden="true">5.</strong> Worker</a></li></ol>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div id="menu-bar-sticky-container">
+                        <div class="left-buttons">
+                            <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                                <i class="fa fa-bars"></i>
+                            </button>
+                            <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                                <i class="fa fa-paint-brush"></i>
+                            </button>
+                            <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light <span class="default">(default)</span></button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            </ul>
+                        </div>
+
+                        <h1 class="menu-title">Batch Guide</h1>
+
+                        <div class="right-buttons">
+                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                                <i id="print-button" class="fa fa-print"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <a class="header" href="getting-started.html#getting-started" id="getting-started"><h1>Getting started</h1></a>
+<p>The first thing you'll want to do once you've installed <code>batch</code> is connect to a
+RabbitMQ broker. We'll start by creating a <code>Client</code>:</p>
+<pre><pre class="playpen"><code class="language-rust">extern crate batch;
+extern crate tokio_core;
+
+use batch::ClientBuilder;
+use tokio_core::reactor::Core;
+
+fn main() {
+    let mut core = Core::new().unwrap();
+    let handle = core.handle();
+
+    let client = ClientBuilder::new()
+        .connection_url(&quot;amqp://localhost/%2f&quot;)
+        .handle(handle)
+        .build();
+
+    core.run(client).unwrap();
+}
+</code></pre></pre>
+<p>Now, that we're connected to our broker, we'll create our first task. A task is
+a work of unit that you want to asynchronously, becuse handling synchronously is
+not possible or wouldn't be ideal (e.g sending a mail from a web API). The
+easiest of creating a task, is by declaring a structure, and derive <code>Task</code> on
+it:</p>
+<pre><pre class="playpen"><code class="language-rust">#[macro_use]
+extern crate batch;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate tokio_core;
+
+use batch::ClientBuilder;
+use tokio_core::reactor::Core;
+
+#[derive(Serialize, Deserialize, Task)]
+#[task_routing_key = &quot;hello-world&quot;]
+struct SayHello {
+    to: String,
+}
+
+fn main() {
+    let mut core = Core::new().unwrap();
+    let handle = core.handle();
+
+    let client = ClientBuilder::new()
+        .connection_url(&quot;amqp://localhost/%2f&quot;)
+        .handle(handle)
+        .build();
+
+    core.run(client).unwrap();
+}
+</code></pre></pre>
+<blockquote>
+<p><strong>Note</strong>: you can see that in addition to <code>Task</code>, we're also deriving
+<code>serde</code>'s <code>Serialize</code> &amp; <code>Deserialize</code> traits. This is necessary in order to
+safely send task over the network.</p>
+</blockquote>
+<blockquote>
+<p><strong>Note</strong>: When deriving <code>Task</code> we added the (mandatory) <code>task_routing_key</code>
+attribute, it is used by RabbitMQ to deliver your message to the right worker.</p>
+</blockquote>
+<p>Now that we have our task, we can send it to our message broker:</p>
+<pre><pre class="playpen"><code class="language-rust">#[macro_use]
+extern crate batch;
+extern crate futures;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate tokio_core;
+
+use batch::{job, ClientBuilder};
+use futures::Future;
+use tokio_core::reactor::Core;
+
+#[derive(Serialize, Deserialize, Task)]
+#[task_routing_key = &quot;hello-world&quot;]
+struct SayHello {
+    to: String,
+}
+
+fn main() {
+    let mut core = Core::new().unwrap();
+    let handle = core.handle();
+
+    let client = ClientBuilder::new()
+        .connection_url(&quot;amqp://localhost/%2f&quot;)
+        .handle(handle)
+        .build();
+
+    let send = client.and_then(|client| {
+        let task = SayHello {
+            to: &quot;Ferris&quot;.into()
+        };
+
+        job(task).send(&amp;client)
+    });
+
+    core.run(send).unwrap();
+}
+</code></pre></pre>
+<p>Now that our task has been published to our broker, we'll need to fetch it and
+assign a function to this task. To do this, we'll create a new program, the
+<em>worker</em>:</p>
+<pre><pre class="playpen"><code class="language-rust">#[macro_use]
+extern crate batch;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate tokio_core;
+
+use batch::{queue, WorkerBuilder};
+use tokio_core::reactor::Core;
+
+#[derive(Serialize, Deserialize, Task)]
+#[task_routing_key = &quot;hello-world&quot;]
+struct SayHello {
+    to: String,
+}
+
+fn main() {
+    let mut core = Core::new().unwrap();
+    let handle = core.handle();
+
+    let queues = vec![queue(&quot;hello-world&quot;)];
+    let worker = WorkerBuilder::new(())
+        .connection_url(&quot;amqp://localhost/%2f&quot;)
+        .queues(queues)
+        .handle(handle)
+        .build()
+        .unwrap();
+
+    core.run(worker.run()).unwrap();
+}
+</code></pre></pre>
+<p>In order to register our task on the worker, we'll need to make it executable by
+implementing the <code>Perform</code> trait:</p>
+<pre><pre class="playpen"><code class="language-rust">#[macro_use]
+extern crate batch;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate tokio_core;
+
+use batch::{queue, Perform, WorkerBuilder};
+use tokio_core::reactor::Core;
+
+#[derive(Serialize, Deserialize, Task)]
+#[task_routing_key = &quot;hello-world&quot;]
+struct SayHello {
+    to: String,
+}
+
+impl Perform for SayHello {
+    type Context = ();
+
+    fn perform(&amp;self, _ctx: Self::Context) {
+        println!(&quot;Hello {}!&quot;, self.to);
+    }
+}
+
+fn main() {
+    let mut core = Core::new().unwrap();
+    let handle = core.handle();
+
+    let queues = vec![queue(&quot;hello-world&quot;)];
+    let worker = WorkerBuilder::new(())
+        .connection_url(&quot;amqp://localhost/%2f&quot;)
+        .queues(queues)
+        .handle(handle)
+        .task::&lt;SayHello&gt;()
+        .build()
+        .unwrap();
+
+    core.run(worker.run()).unwrap();
+}
+</code></pre></pre>
+<p>We can now run our <em>worker</em> program and see the <code>Hello Ferris!</code> message
+displayed in the terminal.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="installation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="tasks.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a href="installation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a href="tasks.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+
+        <!-- Local fallback for Font Awesome -->
+        <script>
+            if (getComputedStyle(document.querySelector(".fa")).fontFamily !== "FontAwesome") {
+                var link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.type = 'text/css';
+                link.href = '_FontAwesome/css/font-awesome.css';
+                document.head.insertBefore(link, document.head.firstChild)
+            }
+        </script>
+
+        
+
+        
+
+        
+
+        
+
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS script -->
+        
+
+    </body>
+</html>
